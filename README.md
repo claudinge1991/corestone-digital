@@ -1,6 +1,6 @@
-# Corestone Digital
+# Corestone
 
-Static public site for Corestone Digital, including product pages, services, project intake, and product-support/legal routes.
+Static public site for Corestone Holdings, including property and field-service coordination, digital capabilities, products, contact intake, and product-support/legal routes.
 
 ## Local preview
 
