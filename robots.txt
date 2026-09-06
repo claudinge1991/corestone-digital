@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://claudinge1991.github.io/corestone-digital/sitemap.xml
