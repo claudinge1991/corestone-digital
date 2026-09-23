@@ -14,7 +14,7 @@ The project inquiry form is deliberately a no-secret `mailto:` fallback to `core
 
 ## CAD & 3D Design intake (`/cad/`)
 
-`/cad/` is a managed-service intake. `assets/cad.js` validates the request, generates a browser-side request ID (`CAD-YYYYMMDD-XXXXXX`), and opens a prepared email. Reference files are checked locally and never uploaded; the customer attaches them to the email. Storing requests, server-issued IDs, private file storage, quotes, versioned previews, approvals, and delivery need a backend and are not part of this static site.
+`/cad/` is a managed-service intake. `assets/cad.js` validates the request, generates a browser-side draft reference (`CAD-YYYYMMDD-XXXXXX`, not proof of receipt or a server-issued ID), and opens a prepared email to `hello@corestoneohio.com`. Receipt begins only when the customer sends that email. Reference files are checked locally (10 files / 20 MB each, a selection guard only) and never uploaded; only file names go in the email, so the customer must attach the files manually, subject to their email provider's size limits. File formats are recorded as customer preferences, not promised deliverables. Storing requests, server-issued IDs, private file storage, quotes, versioned previews, approvals, and delivery need a backend and are not part of this static site.
 
 ## Tests
 

@@ -1,12 +1,13 @@
 // CAD & 3D Design intake. Static-site fallback: nothing is uploaded or stored by this page.
+// The ID is a browser-made draft reference, not proof of receipt or a server-issued ID.
 // The request is assembled in the browser and handed to the customer's own email app.
 (function(root){
-const CAD_EMAIL='corestoneholdings@gmail.com';
+const CAD_EMAIL='hello@corestoneohio.com';
 const MAX_FILES=10;
 const MAX_FILE_BYTES=20*1024*1024;
 const ALLOWED_EXT=['jpg','jpeg','png','heic','webp','pdf','stl','step','stp','3mf','obj','iges','igs','dxf','dwg'];
 const ID_ALPHABET='0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-const FIELDS=[['name','Name'],['email','Email'],['phone','Phone'],['company','Business or company'],['contact','Preferred contact'],['use','Intended use'],['dimensions','Dimensions'],['method','Manufacturing method'],['material','Material'],['fit','Fit requirements'],['formats','Requested file formats'],['deadline','Deadline'],['budget','Budget'],['description','Project description']];
+const FIELDS=[['name','Name'],['email','Email'],['phone','Phone'],['company','Business or company'],['contact','Preferred contact'],['use','Intended use'],['dimensions','Dimensions'],['method','Manufacturing method'],['material','Material'],['fit','Fit requirements'],['formats','Preferred file formats (preference, not a promised deliverable)'],['deadline','Deadline'],['budget','Budget'],['description','Project description']];
 
 function makeRequestId(date,bytes){
   const d=date.toISOString().slice(0,10).replace(/-/g,'');
@@ -50,13 +51,13 @@ function buildSummary(id,data,files){
     if(k==='formats')return (data.formats||[]).join(', ')||'—';
     return String(data[k]||'').trim()||'—';
   };
-  const lines=[`Corestone CAD & 3D Design request ${id}`,'',...FIELDS.map(([k,l])=>`${l}: ${val(k)}`),'','Reference files (attach these to this email):'];
+  const lines=[`Corestone CAD & 3D Design request · draft reference ${id}`,'(Draft reference made in the sender\'s browser. Not proof of receipt.)','',...FIELDS.map(([k,l])=>`${l}: ${val(k)}`),'','Reference files selected (names only, NOT attached. Attach them to this email before sending):'];
   lines.push(...(files.length?files.map(f=>`- ${f.name} (${formatSize(f.size)})`):['- None']));
   return lines.join('\n');
 }
 
 function mailtoHref(id,summary){
-  return `mailto:${CAD_EMAIL}?subject=${encodeURIComponent(`CAD request ${id}`)}&body=${encodeURIComponent(summary)}`;
+  return `mailto:${CAD_EMAIL}?subject=${encodeURIComponent(`CAD request (draft ref ${id})`)}&body=${encodeURIComponent(summary)}`;
 }
 
 const api={CAD_EMAIL,MAX_FILES,MAX_FILE_BYTES,ALLOWED_EXT,makeRequestId,checkFiles,validate,buildSummary,mailtoHref,formatSize};

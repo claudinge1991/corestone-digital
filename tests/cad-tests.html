@@ -1,6 +1,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>CAD intake tests</title></head><body>
 <pre id="out">RUNNING</pre>
 <iframe id="page" src="/corestone-digital/cad/" style="width:1200px;height:900px"></iframe>
+<iframe id="home" src="/corestone-digital/" style="width:1200px;height:900px"></iframe>
 <script src="/corestone-digital/assets/cad.js"></script>
 <script>
 const results=[];
@@ -30,14 +31,25 @@ t('file checks: type, size, count',()=>{
 });
 t('summary contains id, unknown dims, formats, files',()=>{
   const s=C.buildSummary('CAD-X',{...base,dimsUnknown:true,dimensions:'ignored',formats:['STEP','STL']},[{name:'photo.jpg',size:2097152}]);
-  ok(s.startsWith('Corestone CAD & 3D Design request CAD-X'));ok(s.includes('Dimensions: Unknown'));ok(!s.includes('ignored'));
-  ok(s.includes('Requested file formats: STEP, STL'));ok(s.includes('- photo.jpg (2.0 MB)'));ok(s.includes('Budget: —'));
+  ok(s.startsWith('Corestone CAD & 3D Design request · draft reference CAD-X'));ok(/Not proof of receipt/.test(s),'draft disclaimer');ok(s.includes('Dimensions: Unknown'));ok(!s.includes('ignored'));
+  ok(s.includes('Preferred file formats (preference, not a promised deliverable): STEP, STL'));ok(s.includes('- photo.jpg (2.0 MB)'));ok(s.includes('names only, NOT attached'),'attach warning');ok(s.includes('Budget: —'));
 });
 t('mailto encodes subject and body',()=>{
   const h=C.mailtoHref('CAD-1','a&b\nc');
-  eq(h,'mailto:corestoneholdings@gmail.com?subject=CAD%20request%20CAD-1&body=a%26b%0Ac');
+  eq(h,'mailto:hello@corestoneohio.com?subject=CAD%20request%20(draft%20ref%20CAD-1)&body=a%26b%0Ac');
 });
 
+const contrast=(a,b)=>{const L=c=>{const v=c.match(/[\d.]+/g).slice(0,3).map(x=>{x/=255;return x<=.03928?x/12.92:((x+.055)/1.055)**2.4});return .2126*v[0]+.7152*v[1]+.0722*v[2]};const[x,y]=[L(a),L(b)].sort((m,n)=>n-m);return (x+.05)/(y+.05)};
+let pending=2;const finish=()=>{if(--pending===0)document.getElementById('out').textContent=results.join('\n')+'\nDONE'};
+document.getElementById('home').addEventListener('load',()=>{
+  const w=document.getElementById('home').contentWindow,d=w.document;
+  t('home hero "What we do" button is readable on the dark hero',()=>{
+    const b=[...d.querySelectorAll('.hero .button')].find(a=>/What we do/.test(a.textContent));ok(b,'button missing');
+    const fg=w.getComputedStyle(b).color,bg=w.getComputedStyle(d.querySelector('.hero')).backgroundColor;
+    const r=contrast(fg,bg);ok(r>=4.5,`contrast ${r.toFixed(2)} (${fg} on ${bg})`);
+  });
+  finish();
+});
 document.getElementById('page').addEventListener('load',()=>{
   const w=document.getElementById('page').contentWindow,d=w.document;
   const $=s=>d.querySelector(s);
@@ -46,6 +58,12 @@ document.getElementById('page').addEventListener('load',()=>{
     ok(d.querySelectorAll('input[name=formats]').length>=5,'formats');
     ok(/Concept/.test($('figure.concept figcaption').textContent),'concept label');
     ok(!/instant(ly)? generat/i.test($('main').textContent),'no instant-generation claim');
+    const txt=$('main').textContent;
+    ok(!/corestoneholdings/.test(txt),'old intake email on CAD page');ok(/hello@corestoneohio\.com/.test(txt),'intake email');
+    ok(/not a promised deliverable/.test(txt),'formats as preference');
+    ok(/file name is not an attachment/i.test(txt)&&/attach the files yourself/.test(txt)&&/Email providers often limit/.test(txt),'manual attach + provider limits');
+    ok(/not proof that we received/.test(txt)&&/not a server-issued/.test(txt),'draft reference wording');
+    ok(!/request ID/i.test(txt),'still calls it a request ID');
   });
   t('unknown toggles dimensions requirement',()=>{
     $('#dims-unknown').click();ok($('#dimensions').disabled&&!$('#dimensions').required);
@@ -63,9 +81,9 @@ document.getElementById('page').addEventListener('load',()=>{
     $('#cad-form').requestSubmit();
     ok($('#cad-errors').hidden,'errors shown: '+$('#cad-errors').textContent);ok(!$('#cad-confirm').hidden,'no confirmation');ok($('#cad-form').hidden,'form still visible');
     const id=$('#cad-confirm [data-id]').textContent;ok(/^CAD-\d{8}-[0-9A-Z]{6}$/.test(id),'id '+id);
-    ok(w.__mailto&&w.__mailto.includes(encodeURIComponent('CAD request '+id)),'mailto not opened');
+    ok(w.__mailto&&w.__mailto.startsWith('mailto:hello@corestoneohio.com?')&&w.__mailto.includes(encodeURIComponent('draft ref '+id)),'mailto not opened');
     ok($('#cad-summary').value.includes('Dimensions: Unknown'));ok($('#cad-confirm [data-files]').hidden,'files step shown without files');
   });
-  document.getElementById('out').textContent=results.join('\n')+'\nDONE';
+  finish();
 });
 </script></body></html>
