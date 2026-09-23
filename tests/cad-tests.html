@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>CAD intake tests</title></head><body>
+<pre id="out">RUNNING</pre>
+<iframe id="page" src="/corestone-digital/cad/" style="width:1200px;height:900px"></iframe>
+<script src="/corestone-digital/assets/cad.js"></script>
+<script>
+const results=[];
+const t=(name,fn)=>{try{fn();results.push(`PASS ${name}`)}catch(e){results.push(`FAIL ${name}: ${e.message}`)}};
+const eq=(a,b)=>{if(JSON.stringify(a)!==JSON.stringify(b))throw new Error(`expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`)};
+const ok=(c,m)=>{if(!c)throw new Error(m||'assertion failed')};
+const C=window.CorestoneCad;
+const base={name:'Ada',email:'ada@example.com',contact:'Email',use:'Jig or shop tool',dimensions:'100 x 20 mm',method:'Unsure',description:'A drill guide',consent:true,dimsUnknown:false,formats:[]};
+
+t('request id format',()=>{
+  const id=C.makeRequestId(new Date('2026-09-23T12:00:00Z'),[0,1,31,32,63,255]);
+  eq(id,'CAD-20260923-01Z0ZZ');
+});
+t('request id uses no ambiguous letters',()=>{
+  for(let i=0;i<200;i++){const b=crypto.getRandomValues(new Uint8Array(6));ok(/^CAD-\d{8}-[0-9A-HJKMNP-TV-Z]{6}$/.test(C.makeRequestId(new Date(),b)),'bad id')}
+});
+t('valid request has no errors',()=>eq(C.validate(base),[]));
+t('dimensions may be unknown',()=>eq(C.validate({...base,dimensions:'',dimsUnknown:true}),[]));
+t('dimensions required unless unknown',()=>ok(C.validate({...base,dimensions:''}).some(e=>/dimensions/.test(e))));
+t('method required (Unsure is allowed)',()=>ok(C.validate({...base,method:''}).some(e=>/manufacturing/.test(e))));
+t('required fields reported',()=>eq(C.validate({}).length,8));
+t('email checked',()=>ok(C.validate({...base,email:'nope'}).some(e=>/email/.test(e))));
+t('file checks: type, size, count',()=>{
+  const r=C.checkFiles([{name:'a.STL',size:10},{name:'b.exe',size:10},{name:'c.png',size:C.MAX_FILE_BYTES+1},{name:'noext',size:1}]);
+  eq(r.ok,[{name:'a.STL',size:10}]);eq(r.errors.length,3);
+  eq(C.checkFiles(Array.from({length:11},(_,i)=>({name:`${i}.jpg`,size:1}))).errors.length,1);
+});
+t('summary contains id, unknown dims, formats, files',()=>{
+  const s=C.buildSummary('CAD-X',{...base,dimsUnknown:true,dimensions:'ignored',formats:['STEP','STL']},[{name:'photo.jpg',size:2097152}]);
+  ok(s.startsWith('Corestone CAD & 3D Design request CAD-X'));ok(s.includes('Dimensions: Unknown'));ok(!s.includes('ignored'));
+  ok(s.includes('Requested file formats: STEP, STL'));ok(s.includes('- photo.jpg (2.0 MB)'));ok(s.includes('Budget: —'));
+});
+t('mailto encodes subject and body',()=>{
+  const h=C.mailtoHref('CAD-1','a&b\nc');
+  eq(h,'mailto:corestoneholdings@gmail.com?subject=CAD%20request%20CAD-1&body=a%26b%0Ac');
+});
+
+document.getElementById('page').addEventListener('load',()=>{
+  const w=document.getElementById('page').contentWindow,d=w.document;
+  const $=s=>d.querySelector(s);
+  t('cad page renders form and concept label',()=>{
+    for(const id of ['name','email','phone','company','contact','use','dimensions','dims-unknown','method','description','fit','material','deadline','budget','references'])ok($('#'+id),`missing #${id}`);
+    ok(d.querySelectorAll('input[name=formats]').length>=5,'formats');
+    ok(/Concept/.test($('figure.concept figcaption').textContent),'concept label');
+    ok(!/instant(ly)? generat/i.test($('main').textContent),'no instant-generation claim');
+  });
+  t('unknown toggles dimensions requirement',()=>{
+    $('#dims-unknown').click();ok($('#dimensions').disabled&&!$('#dimensions').required);
+    $('#dims-unknown').click();ok(!$('#dimensions').disabled&&$('#dimensions').required);
+  });
+  t('empty submit shows errors, no confirmation',()=>{
+    $('#cad-form').requestSubmit();ok(!$('#cad-errors').hidden,'errors hidden');ok($('#cad-confirm').hidden,'confirm shown');
+  });
+  t('valid submit shows request id and prepared email',()=>{
+    // Keep the test from navigating to mailto:.
+    w.HTMLAnchorElement.prototype.click=function(){w.__mailto=this.href};
+    $('#name').value='Ada';$('#email').value='ada@example.com';$('#contact').value='Email';$('#use').value='Jig or shop tool';
+    $('#method').value='Unsure';$('#dims-unknown').click();$('#description').value='Drill guide for 6 mm holes';
+    d.querySelector('input[name=formats][value=STEP]').checked=true;d.querySelector('input[name=consent]').checked=true;
+    $('#cad-form').requestSubmit();
+    ok($('#cad-errors').hidden,'errors shown: '+$('#cad-errors').textContent);ok(!$('#cad-confirm').hidden,'no confirmation');ok($('#cad-form').hidden,'form still visible');
+    const id=$('#cad-confirm [data-id]').textContent;ok(/^CAD-\d{8}-[0-9A-Z]{6}$/.test(id),'id '+id);
+    ok(w.__mailto&&w.__mailto.includes(encodeURIComponent('CAD request '+id)),'mailto not opened');
+    ok($('#cad-summary').value.includes('Dimensions: Unknown'));ok($('#cad-confirm [data-files]').hidden,'files step shown without files');
+  });
+  document.getElementById('out').textContent=results.join('\n')+'\nDONE';
+});
+</script></body></html>
